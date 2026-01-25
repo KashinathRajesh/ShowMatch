@@ -4,3 +4,4 @@ __pycache__/
 *.pyc
 .DS_Store
 show_bank.json
+bank_repair.py
