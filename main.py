@@ -1,13 +1,31 @@
 import os
+import json
 from fetcher import ShowFetcher
 from matcher import VibeMatcher
 
+BANK_FILE="show_bank.json"
+
+def load_bank():
+    if not os.path.exists(BANK_FILE):
+        return [
+            {"title": "The Office", "keywords": ["comedy", "workplace"]},
+            {"title": "Dark", "keywords": ["small town", "supernatural", "mystery"]}
+        ]
+    with open(BANK_FILE, "r") as f:
+        return json.load(f)
+
+def save_to_bank(new_show, current_bank):
+    titles = [show['title'] for show in current_bank]
+    if new_show['title'] not in titles:
+        current_bank.append(new_show)
+        with open(BANK_FILE, "w") as f:
+            json.dump(current_bank, f, indent=4)
+
 def run_vibecheck():
     fetcher= ShowFetcher()
+    bank=load_bank()
 
     user_query=input("Enter a show you love: ")
-    print(f"--- Searching TMDB for '{user_query}' vibe profile... ---")
-
     target_data=fetcher.get_vibe(user_query)
 
     if not target_data:
@@ -17,18 +35,14 @@ def run_vibecheck():
     print(f"Found: {target_data['title']}")
     print(f"Vibe Tags: {', '.join(target_data['keywords'][:5])}...\n")
 
-    local_bank = [
-        {"title": "Dark", "keywords": ["small town", "time travel", "supernatural", "mystery", "parallel world", "disappearance"]},
-        {"title": "The Haunting of Hill House", "keywords": ["horror", "supernatural", "ghost", "family drama", "haunted house"]},
-        {"title": "Yellowjackets", "keywords": ["survival", "mystery", "teens", "supernatural", "psychological horror"]},
-        {"title": "The Office", "keywords": ["comedy", "workplace", "documentary", "mockumentary"]},
-        {"title": "Twin Peaks", "keywords": ["small town", "mystery", "surreal", "supernatural", "investigation"]},
-        {"title": "Wednesday", "keywords": ["goth", "supernatural", "school", "mystery", "monster"]}
-    ]
+    if target_data:
+        save_to_bank(target_data, bank)
+        matcher = VibeMatcher(bank)
+        recommendations = matcher.get_recommendations(target_data['title'])
 
-    local_bank.append(target_data)
-    matcher= VibeMatcher(local_bank)
-    recommendations = matcher.get_recommendations(target_data['title'])
+        print(f"\n--- If you like the vibe of {target_data['title']}, try these: ---")
+        for i, rec in enumerate(recommendations, 1):
+            print(f"{i}. {rec}")
 
     print(f"--- If you like the vibe of {target_data['title']}, try these: ---")
     for i, rec in enumerate(recommendations, 1):
