@@ -21,7 +21,10 @@ fetcher = ShowFetcher()
 def load_bank():
     if os.path.exists("show_bank.json"):
         with open("show_bank.json", "r") as f:
-            return json.load(f)
+            data = json.load(f)
+            print(f"DNA BANK LOADED: {len(data)} shows found.")
+            return data
+    print("CRITICAL: show_bank.json not found!")
     return []
 
 def save_to_bank(new_show, current_bank):

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ShowMatch AI | Find Your Next Obsession</title>
-    
     <meta name="description" content="ShowMatch AI uses deep genetic analysis to find shows that share the hidden DNA of your favorites.">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -83,23 +82,9 @@
                     Tired of Predictable <br>
                     <span class="text-cyan-500 italic">Suggestions?</span>
                 </h2>
-                <p class="text-xl text-slate-400 mb-12 max-w-2xl mx-auto">
+                <p class="text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed">
                     Streaming apps suggest what's popular. <span class="text-white font-bold">ShowMatch AI</span> suggests what's actually like the show you love by analyzing its hidden DNA.
                 </p>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div class="p-8 bg-slate-900/40 rounded-3xl border border-slate-800">
-                        <p class="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-3">1. Pick a Favorite</p>
-                        <p class="text-xs text-slate-500 leading-relaxed">Enter a show that stayed with you long after the credits rolled.</p>
-                    </div>
-                    <div class="p-8 bg-slate-900/40 rounded-3xl border border-slate-800">
-                        <p class="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-3">2. Find the Link</p>
-                        <p class="text-xs text-slate-500 leading-relaxed">We find shows with the same core themes, even across different genres.</p>
-                    </div>
-                    <div class="p-8 bg-slate-900/40 rounded-3xl border border-slate-800">
-                        <p class="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-3">3. Go Deeper</p>
-                        <p class="text-xs text-slate-500 leading-relaxed">Broad filters yield better results. Keep your year range wide to start.</p>
-                    </div>
-                </div>
             </div>
         </div>
     </main>
@@ -124,31 +109,46 @@
 
     <script>
         let currentTarget = null;
+        const API_BASE = window.location.origin;
+
         async function showSuggestions() {
             const q = document.getElementById('showInput').value;
             const box = document.getElementById('suggestionBox');
             if (q.length < 2) { box.classList.add('hidden'); return; }
-            const res = await fetch(`https://showmatch-api.onrender.com/suggest?q=${encodeURIComponent(q)}`);
+            const res = await fetch(`${API_BASE}/suggest?q=${encodeURIComponent(q)}`);
             const suggestions = await res.json();
             if (suggestions.length > 0) {
-                box.innerHTML = suggestions.map(s => `<div class="p-4 hover:bg-slate-800 cursor-pointer border-b border-slate-800 text-sm" onclick="selectSuggestion('${s.replace(/'/g, "\\'")}')">${s}</div>`).join('');
+                box.innerHTML = suggestions.map(s => `<div class="p-4 hover:bg-slate-800 cursor-pointer border-b border-slate-800 text-sm transition" onclick="selectSuggestion('${s.replace(/'/g, "\\'")}')">${s}</div>`).join('');
                 box.classList.remove('hidden');
             } else box.classList.add('hidden');
         }
+
         function selectSuggestion(val) {
             document.getElementById('showInput').value = val;
             document.getElementById('suggestionBox').classList.add('hidden');
             getRecs();
         }
+
         async function getRecs() {
             const title = document.getElementById('showInput').value;
             const resDiv = document.getElementById('results');
             resDiv.innerHTML = `<div class="flex flex-col items-center py-20"><div class="animate-spin h-10 w-10 border-2 border-cyan-500 border-t-transparent rounded-full mb-4"></div><p class="text-[10px] font-bold uppercase tracking-[0.5em] text-cyan-500">Mapping Genetic DNA</p></div>`;
-            const url = `https://showmatch-api.onrender.com/recommend?title=${encodeURIComponent(title)}&limit=${document.getElementById('limit').value}&min_rating=${document.getElementById('min_rating').value}&include_animation=${document.getElementById('animation').checked}&adult=${document.getElementById('adult').checked}&start_year=${document.getElementById('start_year').value}&end_year=${document.getElementById('end_year').value}`;
+            
+            const params = new URLSearchParams({
+                title: title,
+                limit: document.getElementById('limit').value,
+                min_rating: document.getElementById('min_rating').value,
+                include_animation: document.getElementById('animation').checked,
+                adult: document.getElementById('adult').checked,
+                start_year: document.getElementById('start_year').value,
+                end_year: document.getElementById('end_year').value
+            });
+
             try {
-                const res = await fetch(url);
+                const res = await fetch(`${API_BASE}/recommend?${params}`);
                 const data = await res.json();
                 if (data.error) { resDiv.innerHTML = `<p class="text-center text-red-400 p-6 rounded-2xl border border-red-900/50">${data.error}</p>`; return; }
+                
                 currentTarget = data.target;
                 resDiv.innerHTML = `
                     <div class="mb-16 bg-slate-900/40 p-8 rounded-3xl border border-slate-800 flex flex-col md:flex-row gap-8 items-center border-l-4 border-l-cyan-500">
@@ -156,7 +156,7 @@
                         <div>
                             <p class="text-[10px] font-bold text-cyan-500 uppercase tracking-[0.3em] mb-2">Analyzing Target DNA</p>
                             <h2 class="text-4xl font-black italic tracking-tighter mb-2 uppercase">${data.target.title}</h2>
-                            <p class="text-slate-500 text-sm line-clamp-2 max-w-xl">${data.target.description}</p>
+                            <p class="text-slate-500 text-sm line-clamp-2 max-w-xl">${data.target.description || 'No description available.'}</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-20">
@@ -166,25 +166,28 @@
                                 <img src="${show.poster || 'https://via.placeholder.com/500x750'}" class="w-full aspect-[2/3] object-cover">
                                 <div class="p-5">
                                     <h3 class="font-bold text-xs truncate uppercase">${show.title}</h3>
-                                    <p class="text-[10px] text-slate-500 mt-1 font-mono">⭐ ${show.rating} | ${show.certification}</p>
+                                    <p class="text-[10px] text-slate-500 mt-1 font-mono">⭐ ${show.rating || '0.0'} | ${show.certification || 'NR'} | ${show.year || 'N/A'}</p>
                                 </div>
                             </div>
                         `).join('')}
                     </div>`;
-            } catch (e) { resDiv.innerHTML = `<p class="text-red-400 text-center font-mono">SERVER ERROR: Ensure app.py is active.</p>`; }
+            } catch (e) { resDiv.innerHTML = `<p class="text-red-400 text-center font-mono">SERVER ERROR: Backend not responding.</p>`; }
         }
+
         function openModal(show) {
             document.getElementById('modalTitle').innerText = show.title;
             document.getElementById('modalPoster').src = show.poster;
-            document.getElementById('modalMeta').innerText = `RATING: ${show.rating}/10 | CERT: ${show.certification} | YEAR: ${show.year || 'N/A'}`;
-            document.getElementById('modalDesc').innerText = show.description;
+            document.getElementById('modalMeta').innerText = `RATING: ${show.rating || '0.0'}/10 | CERT: ${show.certification || 'NR'} | YEAR: ${show.year || 'N/A'}`;
+            document.getElementById('modalDesc').innerText = show.description || 'No description available for this show.';
             document.getElementById('modal').classList.remove('hidden');
         }
+
         function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
         function shareMatch() {
             const title = document.getElementById('modalTitle').innerText;
             const text = `Perfect match found for ${currentTarget.title} on ShowMatch AI! 🧬\n\nYou have to check out ${title}.`;
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`, '_blank');
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.origin)}`, '_blank');
         }
     </script>
 </body>
