@@ -1,19 +1,45 @@
+import os
+import json
 from fastapi import FastAPI, Query
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fetcher import ShowFetcher
 from matcher import VibeMatcher
-from main import load_bank, save_to_bank
 import uvicorn
 
 app = FastAPI()
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 fetcher = ShowFetcher()
+
+def load_bank():
+    if os.path.exists("show_bank.json"):
+        with open("show_bank.json", "r") as f:
+            return json.load(f)
+    return []
+
+def save_to_bank(new_show, current_bank):
+    if not any(s['title'].lower() == new_show['title'].lower() for s in current_bank):
+        current_bank.append(new_show)
+        with open("show_bank.json", "w") as f:
+            json.dump(current_bank, f, indent=4)
+
 bank = load_bank()
+
+@app.get("/")
+async def serve_frontend():
+    return FileResponse("docs/index.html")
 
 @app.get("/suggest")
 async def get_suggestions(q: str = ""):
-    if not q or len(q) < 2: return []
+    if not q or len(q) < 2:
+        return []
     return [s['title'] for s in bank if q.lower() in s['title'].lower()][:5]
 
 @app.get("/recommend")
@@ -27,7 +53,8 @@ async def get_recommendation(
     end_year: int = 2026
 ):
     target_data = fetcher.get_vibe(title)
-    if not target_data: return {"error": "Show not found"}
+    if not target_data:
+        return {"error": "Show not found"}
     
     save_to_bank(target_data, bank)
 
@@ -44,10 +71,14 @@ async def get_recommendation(
         except:
             show_year = 0
         
-        if not include_animation and 16 in show_genres: continue
-        if show.get('rating', 0) < min_rating: continue
-        if not adult and show_cert in restricted_ratings: continue
-        if show_year != 0 and (show_year < start_year or show_year > end_year): continue
+        if not include_animation and 16 in show_genres:
+            continue
+        if show.get('rating', 0) < min_rating:
+            continue
+        if not adult and show_cert in restricted_ratings:
+            continue
+        if show_year != 0 and (show_year < start_year or show_year > end_year):
+            continue
 
         filtered_bank.append(show)
 
@@ -60,9 +91,10 @@ async def get_recommendation(
     full_recs = []
     for t in rec_titles:
         match = next((item for item in filtered_bank if item["title"] == t), None)
-        if match: full_recs.append(match)
+        if match:
+            full_recs.append(match)
 
     return {"target": target_data, "recommendations": full_recs}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=10000)
