@@ -23,25 +23,36 @@ async def get_recommendation(
     include_animation: bool = True,
     min_rating: float = 0.0,
     adult: bool = False,
-    platform: str = "All"
+    start_year: int = 1950,
+    end_year: int = 2026
 ):
     target_data = fetcher.get_vibe(title)
     if not target_data: return {"error": "Show not found"}
+    
     save_to_bank(target_data, bank)
 
+    restricted_ratings = ["A", "R", "TV-MA", "18", "18+", "NC-17"]
     filtered_bank = []
-    adult_keywords = ["nudity", "sex", "violence", "gore", "suicide", "horror"]
     
     for show in bank:
-        show_keywords = [k.lower() for k in show.get('keywords', [])]
-        show_platforms = [p.lower() for p in show.get('stream_on', [])]
+        show_cert = show.get('certification', 'U')
+        show_genres = show.get('genres', []) or []
+        
+        try:
+            raw_year = show.get('year')
+            show_year = int(raw_year) if raw_year and str(raw_year).isdigit() else 0
+        except:
+            show_year = 0
+        
+        if not include_animation and 16 in show_genres: continue
         if show.get('rating', 0) < min_rating: continue
-        if not include_animation and "animation" in show_keywords: continue
-        if not adult and any(k in adult_keywords for k in show_keywords): continue
-        if platform != "All" and platform.lower() not in show_platforms: continue
+        if not adult and show_cert in restricted_ratings: continue
+        if show_year != 0 and (show_year < start_year or show_year > end_year): continue
+
         filtered_bank.append(show)
 
-    if not filtered_bank: return {"error": "No matching shows found with current filters"}
+    if len(filtered_bank) < 2:
+        return {"error": "Too many filters active. No matches found."}
 
     matcher = VibeMatcher(filtered_bank)
     rec_titles = matcher.get_recommendations(target_data['title'], top_n=limit)
