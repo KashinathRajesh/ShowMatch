@@ -1,7 +1,7 @@
 # ShowMatch AI 
 ### The Genetic DNA Matcher for Movies & Shows
 
-**ShowMatch AI** is a high-accuracy discovery engine that bypasses traditional "Genre" categories. Built for my final year B.Tech project at VIT Bhopal, it uses **TF-IDF Vectorization** to map the hidden thematic DNA of over 3,000 shows.
+**ShowMatch AI** is a high-accuracy discovery engine that bypasses traditional "Genre" categories. It uses **TF-IDF Vectorization** to map the hidden thematic DNA of over 3,000 shows.
 
 
 
